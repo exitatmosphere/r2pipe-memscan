@@ -1,0 +1,16 @@
+{
+  "name": "r2pipe-memscan",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/node": "^22.15.3",
+    "r2pipe-promise": "^1.6.4",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

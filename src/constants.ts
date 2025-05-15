@@ -8,8 +8,8 @@ export const MAX_UINT32 = Math.pow(2, 32) - 1;
 
 export const uint32Bytes = 4;
 
-export const LOCAL_FOLDER = process.env.R2PIPE_MEMSCAN
-  ? `${process.env.R2PIPE_MEMSCAN}/local`
+export const LOCAL_FOLDER = process.env.R2PIPE_MEMSCAN_PATH
+  ? `${process.env.R2PIPE_MEMSCAN_PATH}/local`
   : "local";
 export const R2_DUMP_FILE = `${LOCAL_FOLDER}/r2-dump.txt`;
 export const SU_FILE = `${LOCAL_FOLDER}/su.txt`;

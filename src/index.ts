@@ -27,6 +27,12 @@ async function onFullQuit(r2: R2Pipe) {
   await r2.cmd(`:dk ${SIGTERM}`);
 }
 
+function getTypeValues() {
+  Object.values(NUMBER_TYPES).forEach((type) => {
+    console.log(type);
+  });
+}
+
 async function processSearchForValue(
   r2: R2Pipe,
   value: string,
@@ -282,33 +288,34 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     console.log(
       "qq - Detach from process, terminate process and clean temporary files"
     );
-    console.log("s [value(uint32)] - Search for value from scratch");
+    console.log("t? - Show possible value types to use as 'type' args");
+    console.log("s [value(uint)] - Search for value from scratch");
     console.log(
-      "sc [value(uint32)] - Search for value using previously found addresses"
+      "sc [value(uint)] - Search for value using previously found addresses"
     );
-    console.log("su - Search for unknown value(uint32) from scratch");
+    console.log("su - Search for unknown value(uint) from scratch");
     console.log(
-      `su${SU_CHANGE.UP} - Search for unknown value(uint32) ${SU_CHANGE.UP} than previous`
-    );
-    console.log(
-      `su${SU_CHANGE.DOWN} - Search for unknown value(uint32) ${SU_CHANGE.DOWN} than previous`
+      `su${SU_CHANGE.UP} - Search for unknown value(uint) ${SU_CHANGE.UP} than previous`
     );
     console.log(
-      `su${SU_CHANGE.SAME} - Search for unknown value(uint32) ${SU_CHANGE.SAME} than previous`
+      `su${SU_CHANGE.DOWN} - Search for unknown value(uint) ${SU_CHANGE.DOWN} than previous`
     );
-    console.log("r [addr(0x...)] [type(uint | int)] - Read value from address");
     console.log(
-      "w [addr(0x...)] [value] [type(uint | int)] - Write value to address"
+      `su${SU_CHANGE.SAME} - Search for unknown value(uint) ${SU_CHANGE.SAME} to previous`
     );
-    console.log("ersr - Show configured address range to search in");
+    console.log("r [addr(0x...)] [type] - Read value from address");
+    console.log("w [addr(0x...)] [value] [type] - Write value to address");
+    console.log("esr? - Show configured address range to search in");
     console.log(
-      "ewsr [startAddr(0x...)] [endAddr(0x...)] - Set address range to search in"
+      "esr= - [startAddr(0x...)] [endAddr(0x...)] - Set address range to search in"
     );
   } else if (inputArgs[0] === "q") {
     return false;
   } else if (inputArgs[0] === "qq") {
     await onFullQuit(r2);
     return false;
+  } else if (inputArgs[0] === "t?") {
+    getTypeValues();
   } else if (inputArgs[0] === "s" && inputArgs.length === 2) {
     await processSearchForValue(r2, inputArgs[1], false);
   } else if (inputArgs[0] === "sc" && inputArgs.length === 2) {
@@ -330,9 +337,9 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       inputArgs[2],
       inputArgs[3] as NUMBER_TYPES
     );
-  } else if (inputArgs[0] === "ersr") {
+  } else if (inputArgs[0] === "esr?") {
     await getAddrRange(r2);
-  } else if (inputArgs[0] === "ewsr" && inputArgs.length === 3) {
+  } else if (inputArgs[0] === "esr=" && inputArgs.length === 3) {
     await setAddrRange(r2, inputArgs[1], inputArgs[2]);
   } else {
     console.log("Unknown command");

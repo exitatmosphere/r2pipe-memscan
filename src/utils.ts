@@ -17,13 +17,13 @@ export function changeEndianness(hexNum: string) {
 }
 
 export function validateNumber(numberAsStr: string, numberType: NUMBER_TYPES) {
-  const number = Number(numberAsStr);
+  const number = BigInt(numberAsStr);
 
   if (
     number < NUMBER_PROPS[numberType].limits[0] ||
     number > NUMBER_PROPS[numberType].limits[1]
   ) {
-    return NaN;
+    return null;
   } else {
     return number;
   }

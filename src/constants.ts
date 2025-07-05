@@ -5,18 +5,18 @@ export const initProcWaitTimeSec = 1;
 export const SIGTERM = 15;
 
 export enum NUMBER_TYPES {
-  UINT,
-  INT,
+  UINT = "uint",
+  INT = "int",
 }
 
 export const NUMBER_PROPS = {
   [NUMBER_TYPES.UINT]: {
     bytes: 4,
-    limits: [0, Math.pow(2, 32) - 1],
+    limits: [0n, 4294967295n],
   },
   [NUMBER_TYPES.INT]: {
     bytes: 4,
-    limits: [-(Math.pow(2, 32) / 2), Math.pow(2, 32) / 2 - 1],
+    limits: [-2147483648n, 2147483647n],
   },
 };
 

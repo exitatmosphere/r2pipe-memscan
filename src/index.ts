@@ -19,22 +19,49 @@ import {
 
 let searchFoundAddresses: string[] = [];
 
-async function processReadValue(r2: R2Pipe, addr: string) {
-  await r2.cmd(`y ${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${addr}`);
+async function processReadValue(
+  r2: R2Pipe,
+  addr: string,
+  numberType: NUMBER_TYPES
+) {
+  const numberProps = NUMBER_PROPS[numberType];
+
+  await r2.cmd(`y ${numberProps.bytes} ${addr}`);
+
   const yankedData = await r2.cmd("y");
   const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
-  const yankedValueFormatted = BigInt(`0x${changeEndianness(yankedValue)}`);
-  console.log(`${yankedValueFormatted}`);
+  const yankedValueFormattedUnsigned = BigInt(
+    `0x${changeEndianness(yankedValue)}`
+  );
+
+  if (
+    numberProps.limits[0] < 0 &&
+    yankedValueFormattedUnsigned > numberProps.limits[1]
+  ) {
+    const yankedValueFormattedSigned =
+      numberProps.limits[0] +
+      yankedValueFormattedUnsigned -
+      numberProps.limits[1] -
+      1n;
+    console.log(`${yankedValueFormattedSigned}`);
+  } else {
+    console.log(`${yankedValueFormattedUnsigned}`);
+  }
 }
 
-async function processWriteValue(r2: R2Pipe, addr: string, value: string) {
-  const valueToWrite = validateNumber(value, NUMBER_TYPES.UINT);
+async function processWriteValue(
+  r2: R2Pipe,
+  addr: string,
+  value: string,
+  numberType: NUMBER_TYPES
+) {
+  const valueToWrite = validateNumber(value, numberType);
 
-  if (Number.isNaN(valueToWrite)) {
+  if (valueToWrite === null) {
     console.log("Incorrect number to write");
   } else {
     await r2.cmd(
-      `wv${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToWrite} @ ${addr}`
+      `wv${NUMBER_PROPS[numberType].bytes} ${valueToWrite} @ ${addr}`
     );
     console.log(`Wrote value ${valueToWrite} to address ${addr}`);
   }
@@ -182,7 +209,7 @@ async function processSearchForValue(
 
   const valueToSearchFor = validateNumber(value, NUMBER_TYPES.UINT);
 
-  if (Number.isNaN(valueToSearchFor)) {
+  if (valueToSearchFor === null) {
     console.log("Incorrect number to search for");
   } else {
     const valueToSearchForAsHexStr = valueToSearchFor.toString(16);
@@ -250,8 +277,12 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       console.log(
         `su${SU_CHANGE.SAME} - Search for unknown value(uint32) ${SU_CHANGE.SAME} than previous`
       );
-      console.log("r [addr(0x...)] - Read value(uint32) from address");
-      console.log("w [addr(0x...)] [value(uint32)] - Write value to address");
+      console.log(
+        "r [addr(0x...)] [type(uint | int)] - Read value from address"
+      );
+      console.log(
+        "w [addr(0x...)] [value] [type(uint | int)] - Write value to address"
+      );
       console.log(
         "esr [startAddr(0x...)] [endAddr(0x...)] - Set address range to search in"
       );
@@ -276,16 +307,25 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       await processSearchForValue(r2, inputArgs[1], false);
     } else if (inputArgs[0] === "sc") {
       await processSearchForValue(r2, inputArgs[1], true);
-    } else if (inputArgs[0] === "r") {
-      await processReadValue(r2, inputArgs[1]);
     } else {
       console.log("Unknown command");
     }
   } else if (inputArgs.length === 3) {
-    if (inputArgs[0] === "w") {
-      await processWriteValue(r2, inputArgs[1], inputArgs[2]);
-    } else if (inputArgs[0] === "esr") {
+    if (inputArgs[0] === "esr") {
       await setAddrRange(r2, inputArgs[1], inputArgs[2]);
+    } else if (inputArgs[0] === "r") {
+      await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);
+    } else {
+      console.log("Unknown command");
+    }
+  } else if (inputArgs.length === 4) {
+    if (inputArgs[0] === "w") {
+      await processWriteValue(
+        r2,
+        inputArgs[1],
+        inputArgs[2],
+        inputArgs[3] as NUMBER_TYPES
+      );
     } else {
       console.log("Unknown command");
     }

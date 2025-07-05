@@ -1,9 +1,9 @@
 import fs from "fs";
 import readline from "readline";
 import { R2Pipe } from "r2pipe-promise";
-import { changeEndianness, sleep, validateUint32 } from "./utils";
+import { changeEndianness, sleep, validateNumber } from "./utils";
 import {
-  uint32Bytes,
+  NUMBER_PROPS,
   question,
   SIGTERM,
   initProcWaitTimeSec,
@@ -14,12 +14,13 @@ import {
   SU_PREV_FILE,
   SU_TEMP_FILE,
   MAX_LINES_BEFORE_WRITE,
+  NUMBER_TYPES,
 } from "./constants";
 
 let searchFoundAddresses: string[] = [];
 
 async function processReadValue(r2: R2Pipe, addr: string) {
-  await r2.cmd(`y ${uint32Bytes} ${addr}`);
+  await r2.cmd(`y ${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${addr}`);
   const yankedData = await r2.cmd("y");
   const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
   const yankedValueFormatted = BigInt(`0x${changeEndianness(yankedValue)}`);
@@ -27,12 +28,14 @@ async function processReadValue(r2: R2Pipe, addr: string) {
 }
 
 async function processWriteValue(r2: R2Pipe, addr: string, value: string) {
-  const valueToWrite = validateUint32(value);
+  const valueToWrite = validateNumber(value, NUMBER_TYPES.UINT);
 
-  if (valueToWrite === -1) {
+  if (Number.isNaN(valueToWrite)) {
     console.log("Incorrect number to write");
   } else {
-    await r2.cmd(`wv${uint32Bytes} ${valueToWrite} @ ${addr}`);
+    await r2.cmd(
+      `wv${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToWrite} @ ${addr}`
+    );
     console.log(`Wrote value ${valueToWrite} to address ${addr}`);
   }
 }
@@ -70,12 +73,16 @@ async function processSearchForUnknownValue(
     const chunkSize = (chunk as Buffer).length;
     let chunkToWrite = "";
 
-    for (let offset = 0; offset < chunkSize; offset += uint32Bytes) {
+    for (
+      let offset = 0;
+      offset < chunkSize;
+      offset += NUMBER_PROPS[NUMBER_TYPES.UINT].bytes
+    ) {
       const addr = addrStart + BigInt(offset);
       const value = BigInt(
         `0x${changeEndianness(
           (chunk as Buffer)
-            .subarray(offset, offset + uint32Bytes)
+            .subarray(offset, offset + NUMBER_PROPS[NUMBER_TYPES.UINT].bytes)
             .toString("hex")
         )}`
       );
@@ -173,15 +180,17 @@ async function processSearchForValue(
     return;
   }
 
-  const valueToSearchFor = validateUint32(value);
+  const valueToSearchFor = validateNumber(value, NUMBER_TYPES.UINT);
 
-  if (valueToSearchFor === -1) {
+  if (Number.isNaN(valueToSearchFor)) {
     console.log("Incorrect number to search for");
   } else {
     const valueToSearchForAsHexStr = valueToSearchFor.toString(16);
     const valueToSearchForAsHexStrPadded =
-      "0".repeat(uint32Bytes * 2 - valueToSearchForAsHexStr.length) +
-      valueToSearchForAsHexStr;
+      "0".repeat(
+        NUMBER_PROPS[NUMBER_TYPES.UINT].bytes * 2 -
+          valueToSearchForAsHexStr.length
+      ) + valueToSearchForAsHexStr;
     const valueToSearchForFormatted = changeEndianness(
       valueToSearchForAsHexStrPadded
     );
@@ -190,7 +199,7 @@ async function processSearchForValue(
     );
 
     const searchRes = await r2.cmd(
-      `:/v${uint32Bytes} ${valueToSearchForFormatted}`
+      `:/v${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToSearchForFormatted}`
     );
     const searchResLines = searchRes.split("\n");
     const searchFoundAddressesLocal: string[] = [];

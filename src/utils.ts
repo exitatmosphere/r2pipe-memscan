@@ -1,4 +1,4 @@
-import { MAX_UINT32 } from "./constants";
+import { NUMBER_PROPS, NUMBER_TYPES } from "./constants";
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,11 +16,14 @@ export function changeEndianness(hexNum: string) {
   return result.join("");
 }
 
-export function validateUint32(numberAsStr: string) {
+export function validateNumber(numberAsStr: string, numberType: NUMBER_TYPES) {
   const number = Number(numberAsStr);
 
-  if (Number.isNaN(number) || number < 0 || number > MAX_UINT32) {
-    return -1;
+  if (
+    number < NUMBER_PROPS[numberType].limits[0] ||
+    number > NUMBER_PROPS[numberType].limits[1]
+  ) {
+    return NaN;
   } else {
     return number;
   }

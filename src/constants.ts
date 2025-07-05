@@ -4,9 +4,21 @@ export const initProcWaitTimeSec = 1;
 
 export const SIGTERM = 15;
 
-export const MAX_UINT32 = Math.pow(2, 32) - 1;
+export enum NUMBER_TYPES {
+  UINT,
+  INT,
+}
 
-export const uint32Bytes = 4;
+export const NUMBER_PROPS = {
+  [NUMBER_TYPES.UINT]: {
+    bytes: 4,
+    limits: [0, Math.pow(2, 32) - 1],
+  },
+  [NUMBER_TYPES.INT]: {
+    bytes: 4,
+    limits: [-(Math.pow(2, 32) / 2), Math.pow(2, 32) / 2 - 1],
+  },
+};
 
 export const LOCAL_FOLDER = process.env.R2PIPE_MEMSCAN_PATH
   ? `${process.env.R2PIPE_MEMSCAN_PATH}/local`

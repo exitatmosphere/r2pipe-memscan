@@ -309,9 +309,9 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
   } else if (inputArgs[0] === "qq") {
     await onFullQuit(r2);
     return false;
-  } else if (inputArgs[0] === "s") {
+  } else if (inputArgs[0] === "s" && inputArgs.length === 2) {
     await processSearchForValue(r2, inputArgs[1], false);
-  } else if (inputArgs[0] === "sc") {
+  } else if (inputArgs[0] === "sc" && inputArgs.length === 2) {
     await processSearchForValue(r2, inputArgs[1], true);
   } else if (inputArgs[0] === "su") {
     await processSearchForUnknownValue(r2, addrRange);
@@ -321,9 +321,9 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.DOWN);
   } else if (inputArgs[0] === `su${SU_CHANGE.SAME}`) {
     await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.SAME);
-  } else if (inputArgs[0] === "r") {
+  } else if (inputArgs[0] === "r" && inputArgs.length === 3) {
     await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);
-  } else if (inputArgs[0] === "w") {
+  } else if (inputArgs[0] === "w" && inputArgs.length === 4) {
     await processWriteValue(
       r2,
       inputArgs[1],
@@ -332,7 +332,7 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     );
   } else if (inputArgs[0] === "ersr") {
     await getAddrRange(r2);
-  } else if (inputArgs[0] === "ewsr") {
+  } else if (inputArgs[0] === "ewsr" && inputArgs.length === 3) {
     await setAddrRange(r2, inputArgs[1], inputArgs[2]);
   } else {
     console.log("Unknown command");

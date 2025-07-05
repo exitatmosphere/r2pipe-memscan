@@ -19,51 +19,65 @@ import {
 
 let searchFoundAddresses: string[] = [];
 
-async function processReadValue(
-  r2: R2Pipe,
-  addr: string,
-  numberType: NUMBER_TYPES
-) {
-  const numberProps = NUMBER_PROPS[numberType];
+async function onFullQuit(r2: R2Pipe) {
+  console.log("Cleaning up temporary files");
+  fs.rmSync(LOCAL_FOLDER, { recursive: true, force: true });
 
-  await r2.cmd(`y ${numberProps.bytes} ${addr}`);
-
-  const yankedData = await r2.cmd("y");
-  const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
-  const yankedValueFormattedUnsigned = BigInt(
-    `0x${changeEndianness(yankedValue)}`
-  );
-
-  if (
-    numberProps.limits[0] < 0 &&
-    yankedValueFormattedUnsigned > numberProps.limits[1]
-  ) {
-    const yankedValueFormattedSigned =
-      numberProps.limits[0] +
-      yankedValueFormattedUnsigned -
-      numberProps.limits[1] -
-      1n;
-    console.log(`${yankedValueFormattedSigned}`);
-  } else {
-    console.log(`${yankedValueFormattedUnsigned}`);
-  }
+  console.log("Terminating process");
+  await r2.cmd(`:dk ${SIGTERM}`);
 }
 
-async function processWriteValue(
+async function processSearchForValue(
   r2: R2Pipe,
-  addr: string,
   value: string,
-  numberType: NUMBER_TYPES
+  usePrev: boolean
 ) {
-  const valueToWrite = validateNumber(value, numberType);
+  if (usePrev && searchFoundAddresses.length == 0) {
+    console.log("No previous found values to filter");
+    return;
+  }
 
-  if (valueToWrite === null) {
-    console.log("Incorrect number to write");
+  const valueToSearchFor = validateNumber(value, NUMBER_TYPES.UINT);
+
+  if (valueToSearchFor === null) {
+    console.log("Incorrect number to search for");
   } else {
-    await r2.cmd(
-      `wv${NUMBER_PROPS[numberType].bytes} ${valueToWrite} @ ${addr}`
+    const valueToSearchForAsHexStr = valueToSearchFor.toString(16);
+    const valueToSearchForAsHexStrPadded =
+      "0".repeat(
+        NUMBER_PROPS[NUMBER_TYPES.UINT].bytes * 2 -
+          valueToSearchForAsHexStr.length
+      ) + valueToSearchForAsHexStr;
+    const valueToSearchForFormatted = changeEndianness(
+      valueToSearchForAsHexStrPadded
     );
-    console.log(`Wrote value ${valueToWrite} to address ${addr}`);
+    console.log(
+      `Searching for value: ${valueToSearchFor} (formatted as ${valueToSearchForFormatted})`
+    );
+
+    const searchRes = await r2.cmd(
+      `:/v${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToSearchForFormatted}`
+    );
+    const searchResLines = searchRes.split("\n");
+    const searchFoundAddressesLocal: string[] = [];
+    for (const searchResLine of searchResLines) {
+      if (searchResLine.startsWith("0x")) {
+        searchFoundAddressesLocal.push(searchResLine.split(" ", 1)[0]);
+      }
+    }
+
+    if (!usePrev) {
+      searchFoundAddresses = searchFoundAddressesLocal;
+    } else {
+      searchFoundAddresses = searchFoundAddresses.filter((addr) =>
+        searchFoundAddressesLocal.includes(addr)
+      );
+    }
+
+    console.log("Found addresses with value:");
+    console.log("-------------------");
+    searchFoundAddresses.forEach((addr) => console.log(addr));
+    console.log("-------------------");
   }
 }
 
@@ -197,58 +211,64 @@ async function processSearchForUnknownValue(
   }
 }
 
-async function processSearchForValue(
+async function processReadValue(
   r2: R2Pipe,
-  value: string,
-  usePrev: boolean
+  addr: string,
+  numberType: NUMBER_TYPES
 ) {
-  if (usePrev && searchFoundAddresses.length == 0) {
-    console.log("No previous found values to filter");
-    return;
-  }
+  const numberProps = NUMBER_PROPS[numberType];
 
-  const valueToSearchFor = validateNumber(value, NUMBER_TYPES.UINT);
+  await r2.cmd(`y ${numberProps.bytes} ${addr}`);
 
-  if (valueToSearchFor === null) {
-    console.log("Incorrect number to search for");
+  const yankedData = await r2.cmd("y");
+  const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
+  const yankedValueFormattedUnsigned = BigInt(
+    `0x${changeEndianness(yankedValue)}`
+  );
+
+  if (
+    numberProps.limits[0] < 0 &&
+    yankedValueFormattedUnsigned > numberProps.limits[1]
+  ) {
+    const yankedValueFormattedSigned =
+      numberProps.limits[0] +
+      yankedValueFormattedUnsigned -
+      numberProps.limits[1] -
+      1n;
+    console.log(`${yankedValueFormattedSigned}`);
   } else {
-    const valueToSearchForAsHexStr = valueToSearchFor.toString(16);
-    const valueToSearchForAsHexStrPadded =
-      "0".repeat(
-        NUMBER_PROPS[NUMBER_TYPES.UINT].bytes * 2 -
-          valueToSearchForAsHexStr.length
-      ) + valueToSearchForAsHexStr;
-    const valueToSearchForFormatted = changeEndianness(
-      valueToSearchForAsHexStrPadded
-    );
-    console.log(
-      `Searching for value: ${valueToSearchFor} (formatted as ${valueToSearchForFormatted})`
-    );
-
-    const searchRes = await r2.cmd(
-      `:/v${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToSearchForFormatted}`
-    );
-    const searchResLines = searchRes.split("\n");
-    const searchFoundAddressesLocal: string[] = [];
-    for (const searchResLine of searchResLines) {
-      if (searchResLine.startsWith("0x")) {
-        searchFoundAddressesLocal.push(searchResLine.split(" ", 1)[0]);
-      }
-    }
-
-    if (!usePrev) {
-      searchFoundAddresses = searchFoundAddressesLocal;
-    } else {
-      searchFoundAddresses = searchFoundAddresses.filter((addr) =>
-        searchFoundAddressesLocal.includes(addr)
-      );
-    }
-
-    console.log("Found addresses with value:");
-    console.log("-------------------");
-    searchFoundAddresses.forEach((addr) => console.log(addr));
-    console.log("-------------------");
+    console.log(`${yankedValueFormattedUnsigned}`);
   }
+}
+
+async function processWriteValue(
+  r2: R2Pipe,
+  addr: string,
+  value: string,
+  numberType: NUMBER_TYPES
+) {
+  const valueToWrite = validateNumber(value, numberType);
+
+  if (valueToWrite === null) {
+    console.log("Incorrect number to write");
+  } else {
+    await r2.cmd(
+      `wv${NUMBER_PROPS[numberType].bytes} ${valueToWrite} @ ${addr}`
+    );
+    console.log(`Wrote value ${valueToWrite} to address ${addr}`);
+  }
+}
+
+async function getAddrRange(r2: R2Pipe) {
+  const start = (await r2.cmd(`:e search.from`)).replace("\n", "");
+  const end = (await r2.cmd(`:e search.to`)).replace("\n", "");
+  console.log(`Search address range is ${start}-${end}`);
+}
+
+async function setAddrRange(r2: R2Pipe, start: string, end: string) {
+  await r2.cmd(`:e search.from=${start}`);
+  await r2.cmd(`:e search.to=${end}`);
+  console.log(`Set search address range as ${start}-${end}`);
 }
 
 async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
@@ -256,79 +276,64 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
 
   const inputArgs = input.split(" ");
 
-  if (inputArgs.length === 1) {
-    if (inputArgs[0] === "?") {
-      console.log("? - Show this message");
-      console.log("q - Detach from process");
-      console.log(
-        "qq - Detach from process, terminate process and clean temporary files"
-      );
-      console.log("s [value(uint32)] - Search for value from scratch");
-      console.log(
-        "sc [value(uint32)] - Search for value using previously found addresses"
-      );
-      console.log("su - Search for unknown value(uint32) from scratch");
-      console.log(
-        `su${SU_CHANGE.UP} - Search for unknown value(uint32) ${SU_CHANGE.UP} than previous`
-      );
-      console.log(
-        `su${SU_CHANGE.DOWN} - Search for unknown value(uint32) ${SU_CHANGE.DOWN} than previous`
-      );
-      console.log(
-        `su${SU_CHANGE.SAME} - Search for unknown value(uint32) ${SU_CHANGE.SAME} than previous`
-      );
-      console.log(
-        "r [addr(0x...)] [type(uint | int)] - Read value from address"
-      );
-      console.log(
-        "w [addr(0x...)] [value] [type(uint | int)] - Write value to address"
-      );
-      console.log(
-        "esr [startAddr(0x...)] [endAddr(0x...)] - Set address range to search in"
-      );
-    } else if (inputArgs[0] === "q") {
-      return false;
-    } else if (inputArgs[0] === "qq") {
-      await onFullQuit(r2);
-      return false;
-    } else if (inputArgs[0] === "su") {
-      await processSearchForUnknownValue(r2, addrRange);
-    } else if (inputArgs[0] === `su${SU_CHANGE.UP}`) {
-      await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.UP);
-    } else if (inputArgs[0] === `su${SU_CHANGE.DOWN}`) {
-      await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.DOWN);
-    } else if (inputArgs[0] === `su${SU_CHANGE.SAME}`) {
-      await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.SAME);
-    } else {
-      console.log("Unknown command");
-    }
-  } else if (inputArgs.length === 2) {
-    if (inputArgs[0] === "s") {
-      await processSearchForValue(r2, inputArgs[1], false);
-    } else if (inputArgs[0] === "sc") {
-      await processSearchForValue(r2, inputArgs[1], true);
-    } else {
-      console.log("Unknown command");
-    }
-  } else if (inputArgs.length === 3) {
-    if (inputArgs[0] === "esr") {
-      await setAddrRange(r2, inputArgs[1], inputArgs[2]);
-    } else if (inputArgs[0] === "r") {
-      await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);
-    } else {
-      console.log("Unknown command");
-    }
-  } else if (inputArgs.length === 4) {
-    if (inputArgs[0] === "w") {
-      await processWriteValue(
-        r2,
-        inputArgs[1],
-        inputArgs[2],
-        inputArgs[3] as NUMBER_TYPES
-      );
-    } else {
-      console.log("Unknown command");
-    }
+  if (inputArgs[0] === "?") {
+    console.log("? - Show this message");
+    console.log("q - Detach from process");
+    console.log(
+      "qq - Detach from process, terminate process and clean temporary files"
+    );
+    console.log("s [value(uint32)] - Search for value from scratch");
+    console.log(
+      "sc [value(uint32)] - Search for value using previously found addresses"
+    );
+    console.log("su - Search for unknown value(uint32) from scratch");
+    console.log(
+      `su${SU_CHANGE.UP} - Search for unknown value(uint32) ${SU_CHANGE.UP} than previous`
+    );
+    console.log(
+      `su${SU_CHANGE.DOWN} - Search for unknown value(uint32) ${SU_CHANGE.DOWN} than previous`
+    );
+    console.log(
+      `su${SU_CHANGE.SAME} - Search for unknown value(uint32) ${SU_CHANGE.SAME} than previous`
+    );
+    console.log("r [addr(0x...)] [type(uint | int)] - Read value from address");
+    console.log(
+      "w [addr(0x...)] [value] [type(uint | int)] - Write value to address"
+    );
+    console.log("ersr - Show configured address range to search in");
+    console.log(
+      "ewsr [startAddr(0x...)] [endAddr(0x...)] - Set address range to search in"
+    );
+  } else if (inputArgs[0] === "q") {
+    return false;
+  } else if (inputArgs[0] === "qq") {
+    await onFullQuit(r2);
+    return false;
+  } else if (inputArgs[0] === "s") {
+    await processSearchForValue(r2, inputArgs[1], false);
+  } else if (inputArgs[0] === "sc") {
+    await processSearchForValue(r2, inputArgs[1], true);
+  } else if (inputArgs[0] === "su") {
+    await processSearchForUnknownValue(r2, addrRange);
+  } else if (inputArgs[0] === `su${SU_CHANGE.UP}`) {
+    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.UP);
+  } else if (inputArgs[0] === `su${SU_CHANGE.DOWN}`) {
+    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.DOWN);
+  } else if (inputArgs[0] === `su${SU_CHANGE.SAME}`) {
+    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.SAME);
+  } else if (inputArgs[0] === "r") {
+    await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);
+  } else if (inputArgs[0] === "w") {
+    await processWriteValue(
+      r2,
+      inputArgs[1],
+      inputArgs[2],
+      inputArgs[3] as NUMBER_TYPES
+    );
+  } else if (inputArgs[0] === "ersr") {
+    await getAddrRange(r2);
+  } else if (inputArgs[0] === "ewsr") {
+    await setAddrRange(r2, inputArgs[1], inputArgs[2]);
   } else {
     console.log("Unknown command");
   }
@@ -336,15 +341,7 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
   return true;
 }
 
-async function onFullQuit(r2: R2Pipe) {
-  console.log("Cleaning up temporary files");
-  fs.rmSync(LOCAL_FOLDER, { recursive: true, force: true });
-
-  console.log("Terminating process");
-  await r2.cmd(`:dk ${SIGTERM}`);
-}
-
-function getAddrRange(procPid: string, type: "stack" | "heap") {
+function getAddrRangeFromOs(procPid: string, type: "stack" | "heap") {
   const procMapsFilePath = `/proc/${procPid}/maps`;
   const procMapsFileContent = fs.readFileSync(procMapsFilePath, "utf-8");
 
@@ -365,12 +362,6 @@ function getAddrRange(procPid: string, type: "stack" | "heap") {
     .map((addr) => `0x${addr}`);
 
   return addrRange;
-}
-
-async function setAddrRange(r2: R2Pipe, start: string, end: string) {
-  await r2.cmd(`:e search.from=${start}`);
-  await r2.cmd(`:e search.to=${end}`);
-  console.log(`Set search address range as ${start}-${end}`);
 }
 
 async function main() {
@@ -401,10 +392,10 @@ async function main() {
   const childPid = (await r2.cmd(":dp")).replace("\n", "");
   console.log(`Process id: ${childPid}`);
 
-  const stackAddrRange = getAddrRange(childPid, "stack");
+  const stackAddrRange = getAddrRangeFromOs(childPid, "stack");
   console.log(`Stack located in: ${stackAddrRange[0]}-${stackAddrRange[1]}`);
 
-  const heapAddrRange = getAddrRange(childPid, "heap");
+  const heapAddrRange = getAddrRangeFromOs(childPid, "heap");
   console.log(`Heap located in: ${heapAddrRange[0]}-${heapAddrRange[1]}`);
 
   await r2.cmd(`:e search.align=4`);

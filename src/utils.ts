@@ -32,11 +32,11 @@ export function validateNumber(numberAsStr: string, numberType: NUMBER_TYPES) {
 export function numberFromHexStr(hexStr: string, numberType: NUMBER_TYPES) {
   const numberProps = NUMBER_PROPS[numberType];
 
-  if (hexStr.slice(2).length != numberProps.bytes * 2) {
+  if (hexStr.length != numberProps.bytes * 2) {
     return null;
   }
 
-  const numberUnsigned = BigInt(hexStr);
+  const numberUnsigned = BigInt(`0x${hexStr}`);
 
   if (numberProps.limits[0] < 0 && numberUnsigned > numberProps.limits[1]) {
     const numberSigned =
@@ -45,4 +45,23 @@ export function numberFromHexStr(hexStr: string, numberType: NUMBER_TYPES) {
   } else {
     return numberUnsigned;
   }
+}
+
+export function hexStrFromNumber(number: bigint, numberType: NUMBER_TYPES) {
+  const numberProps = NUMBER_PROPS[numberType];
+
+  if (validateNumber(`${number}`, numberType) === null) {
+    return null;
+  }
+
+  // unsigned number that corresponds to the same byte representation
+  if (number < 0) {
+    number = numberProps.limits[1] - numberProps.limits[0] + number + 1n;
+  }
+
+  const numberAsHexStr = number.toString(16);
+  const numberAsHexStrPadded =
+    "0".repeat(numberProps.bytes * 2 - numberAsHexStr.length) + numberAsHexStr;
+
+  return numberAsHexStrPadded;
 }

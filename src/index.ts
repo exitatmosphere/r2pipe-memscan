@@ -3,6 +3,7 @@ import readline from "readline";
 import { R2Pipe } from "r2pipe-promise";
 import {
   changeEndianness,
+  hexStrFromNumber,
   numberFromHexStr,
   sleep,
   validateNumber,
@@ -41,33 +42,32 @@ function getTypeValues() {
 async function processSearchForValue(
   r2: R2Pipe,
   value: string,
-  usePrev: boolean
+  usePrev: boolean,
+  numberType: NUMBER_TYPES
 ) {
   if (usePrev && searchFoundAddresses.length == 0) {
     console.log("No previous found values to filter");
     return;
   }
 
-  const valueToSearchFor = validateNumber(value, NUMBER_TYPES.UINT);
+  const valueToSearchFor = validateNumber(value, numberType);
 
   if (valueToSearchFor === null) {
     console.log("Incorrect number to search for");
   } else {
-    const valueToSearchForAsHexStr = valueToSearchFor.toString(16);
-    const valueToSearchForAsHexStrPadded =
-      "0".repeat(
-        NUMBER_PROPS[NUMBER_TYPES.UINT].bytes * 2 -
-          valueToSearchForAsHexStr.length
-      ) + valueToSearchForAsHexStr;
+    const valueToSearchForAsHexStr = hexStrFromNumber(
+      valueToSearchFor,
+      numberType
+    );
     const valueToSearchForFormatted = changeEndianness(
-      valueToSearchForAsHexStrPadded
+      valueToSearchForAsHexStr!
     );
     console.log(
       `Searching for value: ${valueToSearchFor} (formatted as ${valueToSearchForFormatted})`
     );
 
     const searchRes = await r2.cmd(
-      `:/v${NUMBER_PROPS[NUMBER_TYPES.UINT].bytes} ${valueToSearchForFormatted}`
+      `:/v${NUMBER_PROPS[numberType].bytes} ${valueToSearchForFormatted}`
     );
     const searchResLines = searchRes.split("\n");
     const searchFoundAddressesLocal: string[] = [];
@@ -235,7 +235,7 @@ async function processReadValue(
   const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
 
   const yankedValueFormatted = numberFromHexStr(
-    `0x${changeEndianness(yankedValue)}`,
+    changeEndianness(yankedValue),
     numberType
   );
   console.log(`${yankedValueFormatted}`);
@@ -283,9 +283,9 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       "qq - Detach from process, terminate process and clean temporary files"
     );
     console.log("t? - Show possible value types to use as 'type' args");
-    console.log("s [value(uint)] - Search for value from scratch");
+    console.log("s [value] [type] - Search for value from scratch");
     console.log(
-      "sc [value(uint)] - Search for value using previously found addresses"
+      "sc [value] [type] - Search for value using previously found addresses"
     );
     console.log("su - Search for unknown value(uint) from scratch");
     console.log(
@@ -310,10 +310,20 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     return false;
   } else if (inputArgs[0] === "t?") {
     getTypeValues();
-  } else if (inputArgs[0] === "s" && inputArgs.length === 2) {
-    await processSearchForValue(r2, inputArgs[1], false);
-  } else if (inputArgs[0] === "sc" && inputArgs.length === 2) {
-    await processSearchForValue(r2, inputArgs[1], true);
+  } else if (inputArgs[0] === "s" && inputArgs.length === 3) {
+    await processSearchForValue(
+      r2,
+      inputArgs[1],
+      false,
+      inputArgs[2] as NUMBER_TYPES
+    );
+  } else if (inputArgs[0] === "sc" && inputArgs.length === 3) {
+    await processSearchForValue(
+      r2,
+      inputArgs[1],
+      true,
+      inputArgs[2] as NUMBER_TYPES
+    );
   } else if (inputArgs[0] === "su") {
     await processSearchForUnknownValue(r2, addrRange);
   } else if (inputArgs[0] === `su${SU_CHANGE.UP}`) {

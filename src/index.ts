@@ -1,7 +1,12 @@
 import fs from "fs";
 import readline from "readline";
 import { R2Pipe } from "r2pipe-promise";
-import { changeEndianness, sleep, validateNumber } from "./utils";
+import {
+  changeEndianness,
+  numberFromHexStr,
+  sleep,
+  validateNumber,
+} from "./utils";
 import {
   NUMBER_PROPS,
   question,
@@ -228,23 +233,12 @@ async function processReadValue(
 
   const yankedData = await r2.cmd("y");
   const yankedValue = yankedData.split(" ", 3)[2].replace("\n", "");
-  const yankedValueFormattedUnsigned = BigInt(
-    `0x${changeEndianness(yankedValue)}`
-  );
 
-  if (
-    numberProps.limits[0] < 0 &&
-    yankedValueFormattedUnsigned > numberProps.limits[1]
-  ) {
-    const yankedValueFormattedSigned =
-      numberProps.limits[0] +
-      yankedValueFormattedUnsigned -
-      numberProps.limits[1] -
-      1n;
-    console.log(`${yankedValueFormattedSigned}`);
-  } else {
-    console.log(`${yankedValueFormattedUnsigned}`);
-  }
+  const yankedValueFormatted = numberFromHexStr(
+    `0x${changeEndianness(yankedValue)}`,
+    numberType
+  );
+  console.log(`${yankedValueFormatted}`);
 }
 
 async function processWriteValue(

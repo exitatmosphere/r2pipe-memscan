@@ -28,3 +28,21 @@ export function validateNumber(numberAsStr: string, numberType: NUMBER_TYPES) {
     return number;
   }
 }
+
+export function numberFromHexStr(hexStr: string, numberType: NUMBER_TYPES) {
+  const numberProps = NUMBER_PROPS[numberType];
+
+  if (hexStr.slice(2).length != numberProps.bytes * 2) {
+    return null;
+  }
+
+  const numberUnsigned = BigInt(hexStr);
+
+  if (numberProps.limits[0] < 0 && numberUnsigned > numberProps.limits[1]) {
+    const numberSigned =
+      numberProps.limits[0] + numberUnsigned - numberProps.limits[1] - 1n;
+    return numberSigned;
+  } else {
+    return numberUnsigned;
+  }
+}

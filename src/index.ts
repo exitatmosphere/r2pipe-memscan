@@ -95,8 +95,11 @@ async function processSearchForValue(
 async function processSearchForUnknownValue(
   r2: R2Pipe,
   addrRange: string[],
+  numberType: NUMBER_TYPES,
   changeFromPrev?: SU_CHANGE
 ) {
+  const numberProps = NUMBER_PROPS[numberType];
+
   if (changeFromPrev) {
     if (!fs.existsSync(SU_FILE)) {
       console.log("No previous found values to filter");
@@ -125,18 +128,15 @@ async function processSearchForUnknownValue(
     const chunkSize = (chunk as Buffer).length;
     let chunkToWrite = "";
 
-    for (
-      let offset = 0;
-      offset < chunkSize;
-      offset += NUMBER_PROPS[NUMBER_TYPES.UINT].bytes
-    ) {
+    for (let offset = 0; offset < chunkSize; offset += numberProps.bytes) {
       const addr = addrStart + BigInt(offset);
-      const value = BigInt(
-        `0x${changeEndianness(
+      const value = numberFromHexStr(
+        changeEndianness(
           (chunk as Buffer)
-            .subarray(offset, offset + NUMBER_PROPS[NUMBER_TYPES.UINT].bytes)
+            .subarray(offset, offset + numberProps.bytes)
             .toString("hex")
-        )}`
+        ),
+        numberType
       );
       chunkToWrite += `0x${addr.toString(16)} ${value}\n`;
     }
@@ -287,15 +287,15 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     console.log(
       "sc [value] [type] - Search for value using previously found addresses"
     );
-    console.log("su - Search for unknown value(uint) from scratch");
+    console.log("su [type] - Search for unknown value from scratch");
     console.log(
-      `su${SU_CHANGE.UP} - Search for unknown value(uint) ${SU_CHANGE.UP} than previous`
+      `su${SU_CHANGE.UP} [type] - Search for unknown value ${SU_CHANGE.UP} than previous`
     );
     console.log(
-      `su${SU_CHANGE.DOWN} - Search for unknown value(uint) ${SU_CHANGE.DOWN} than previous`
+      `su${SU_CHANGE.DOWN} [type] - Search for unknown value ${SU_CHANGE.DOWN} than previous`
     );
     console.log(
-      `su${SU_CHANGE.SAME} - Search for unknown value(uint) ${SU_CHANGE.SAME} to previous`
+      `su${SU_CHANGE.SAME} [type] - Search for unknown value ${SU_CHANGE.SAME} to previous`
     );
     console.log("r [addr(0x...)] [type] - Read value from address");
     console.log("w [addr(0x...)] [value] [type] - Write value to address");
@@ -324,14 +324,33 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       true,
       inputArgs[2] as NUMBER_TYPES
     );
-  } else if (inputArgs[0] === "su") {
-    await processSearchForUnknownValue(r2, addrRange);
-  } else if (inputArgs[0] === `su${SU_CHANGE.UP}`) {
-    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.UP);
-  } else if (inputArgs[0] === `su${SU_CHANGE.DOWN}`) {
-    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.DOWN);
-  } else if (inputArgs[0] === `su${SU_CHANGE.SAME}`) {
-    await processSearchForUnknownValue(r2, addrRange, SU_CHANGE.SAME);
+  } else if (inputArgs[0] === "su" && inputArgs.length === 2) {
+    await processSearchForUnknownValue(
+      r2,
+      addrRange,
+      inputArgs[1] as NUMBER_TYPES
+    );
+  } else if (inputArgs[0] === `su${SU_CHANGE.UP}` && inputArgs.length === 2) {
+    await processSearchForUnknownValue(
+      r2,
+      addrRange,
+      inputArgs[1] as NUMBER_TYPES,
+      SU_CHANGE.UP
+    );
+  } else if (inputArgs[0] === `su${SU_CHANGE.DOWN}` && inputArgs.length === 2) {
+    await processSearchForUnknownValue(
+      r2,
+      addrRange,
+      inputArgs[1] as NUMBER_TYPES,
+      SU_CHANGE.DOWN
+    );
+  } else if (inputArgs[0] === `su${SU_CHANGE.SAME}` && inputArgs.length === 2) {
+    await processSearchForUnknownValue(
+      r2,
+      addrRange,
+      inputArgs[1] as NUMBER_TYPES,
+      SU_CHANGE.SAME
+    );
   } else if (inputArgs[0] === "r" && inputArgs.length === 3) {
     await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);
   } else if (inputArgs[0] === "w" && inputArgs.length === 4) {

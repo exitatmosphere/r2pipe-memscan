@@ -94,11 +94,11 @@ async function processSearchForValue(
 
 async function processSearchForUnknownValue(
   r2: R2Pipe,
-  addrRange: string[],
   numberType: NUMBER_TYPES,
   changeFromPrev?: SU_CHANGE
 ) {
   const numberProps = NUMBER_PROPS[numberType];
+  const addrRange = await getAddrRange(r2, false);
 
   if (changeFromPrev) {
     if (!fs.existsSync(SU_FILE)) {
@@ -260,10 +260,13 @@ async function processWriteValue(
   }
 }
 
-async function getAddrRange(r2: R2Pipe) {
+async function getAddrRange(r2: R2Pipe, printMsg: boolean) {
   const start = (await r2.cmd(`:e search.from`)).replace("\n", "");
   const end = (await r2.cmd(`:e search.to`)).replace("\n", "");
-  console.log(`Search address range is ${start}-${end}`);
+
+  if (printMsg) console.log(`Search address range is ${start}-${end}`);
+
+  return [start, end];
 }
 
 async function setAddrRange(r2: R2Pipe, start: string, end: string) {
@@ -272,7 +275,7 @@ async function setAddrRange(r2: R2Pipe, start: string, end: string) {
   console.log(`Set search address range as ${start}-${end}`);
 }
 
-async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
+async function processInput(r2: R2Pipe): Promise<boolean> {
   const input = await question("> ");
 
   const inputArgs = input.split(" ");
@@ -329,36 +332,28 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       inputArgs[2] as NUMBER_TYPES
     );
   } else if (inputArgs[0] === "su" && inputArgs.length === 2) {
-    await processSearchForUnknownValue(
-      r2,
-      addrRange,
-      inputArgs[1] as NUMBER_TYPES
-    );
+    await processSearchForUnknownValue(r2, inputArgs[1] as NUMBER_TYPES);
   } else if (inputArgs[0] === `su${SU_CHANGE.GT}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
-      addrRange,
       inputArgs[1] as NUMBER_TYPES,
       SU_CHANGE.GT
     );
   } else if (inputArgs[0] === `su${SU_CHANGE.LS}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
-      addrRange,
       inputArgs[1] as NUMBER_TYPES,
       SU_CHANGE.LS
     );
   } else if (inputArgs[0] === `su${SU_CHANGE.EQ}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
-      addrRange,
       inputArgs[1] as NUMBER_TYPES,
       SU_CHANGE.EQ
     );
   } else if (inputArgs[0] === `su${SU_CHANGE.NEQ}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
-      addrRange,
       inputArgs[1] as NUMBER_TYPES,
       SU_CHANGE.NEQ
     );
@@ -372,7 +367,7 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       inputArgs[3] as NUMBER_TYPES
     );
   } else if (inputArgs[0] === "esr?") {
-    await getAddrRange(r2);
+    await getAddrRange(r2, true);
   } else if (inputArgs[0] === "esr=" && inputArgs.length === 3) {
     await setAddrRange(r2, inputArgs[1], inputArgs[2]);
   } else {
@@ -444,7 +439,7 @@ async function main() {
 
   console.log("Opening command prompt, enter '?' to see available commands");
   while (true) {
-    if (!(await processInput(r2, stackAddrRange))) break;
+    if (!(await processInput(r2))) break;
   }
 
   console.log("Exiting");

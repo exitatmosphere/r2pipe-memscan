@@ -196,9 +196,10 @@ async function processSearchForUnknownValue(
           const currentValue = BigInt(currentLineAsArray[1]);
 
           if (
-            (changeFromPrev === SU_CHANGE.UP && currentValue > prevValue) ||
-            (changeFromPrev === SU_CHANGE.DOWN && currentValue < prevValue) ||
-            (changeFromPrev === SU_CHANGE.SAME && currentValue === prevValue)
+            (changeFromPrev === SU_CHANGE.GT && currentValue > prevValue) ||
+            (changeFromPrev === SU_CHANGE.LS && currentValue < prevValue) ||
+            (changeFromPrev === SU_CHANGE.EQ && currentValue === prevValue) ||
+            (changeFromPrev === SU_CHANGE.NEQ && currentValue !== prevValue)
           ) {
             newContents += `${currentLine}\n`;
             lineAmount++;
@@ -289,13 +290,16 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
     );
     console.log("su [type] - Search for unknown value from scratch");
     console.log(
-      `su${SU_CHANGE.UP} [type] - Search for unknown value ${SU_CHANGE.UP} than previous`
+      `su${SU_CHANGE.GT} [type] - Search for unknown value ${SU_CHANGE.GT} than previous`
     );
     console.log(
-      `su${SU_CHANGE.DOWN} [type] - Search for unknown value ${SU_CHANGE.DOWN} than previous`
+      `su${SU_CHANGE.LS} [type] - Search for unknown value ${SU_CHANGE.LS} than previous`
     );
     console.log(
-      `su${SU_CHANGE.SAME} [type] - Search for unknown value ${SU_CHANGE.SAME} to previous`
+      `su${SU_CHANGE.EQ} [type] - Search for unknown value ${SU_CHANGE.EQ} to previous`
+    );
+    console.log(
+      `su${SU_CHANGE.NEQ} [type] - Search for unknown value ${SU_CHANGE.NEQ} to previous`
     );
     console.log("r [addr(0x...)] [type] - Read value from address");
     console.log("w [addr(0x...)] [value] [type] - Write value to address");
@@ -330,26 +334,33 @@ async function processInput(r2: R2Pipe, addrRange: string[]): Promise<boolean> {
       addrRange,
       inputArgs[1] as NUMBER_TYPES
     );
-  } else if (inputArgs[0] === `su${SU_CHANGE.UP}` && inputArgs.length === 2) {
+  } else if (inputArgs[0] === `su${SU_CHANGE.GT}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
       addrRange,
       inputArgs[1] as NUMBER_TYPES,
-      SU_CHANGE.UP
+      SU_CHANGE.GT
     );
-  } else if (inputArgs[0] === `su${SU_CHANGE.DOWN}` && inputArgs.length === 2) {
+  } else if (inputArgs[0] === `su${SU_CHANGE.LS}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
       addrRange,
       inputArgs[1] as NUMBER_TYPES,
-      SU_CHANGE.DOWN
+      SU_CHANGE.LS
     );
-  } else if (inputArgs[0] === `su${SU_CHANGE.SAME}` && inputArgs.length === 2) {
+  } else if (inputArgs[0] === `su${SU_CHANGE.EQ}` && inputArgs.length === 2) {
     await processSearchForUnknownValue(
       r2,
       addrRange,
       inputArgs[1] as NUMBER_TYPES,
-      SU_CHANGE.SAME
+      SU_CHANGE.EQ
+    );
+  } else if (inputArgs[0] === `su${SU_CHANGE.NEQ}` && inputArgs.length === 2) {
+    await processSearchForUnknownValue(
+      r2,
+      addrRange,
+      inputArgs[1] as NUMBER_TYPES,
+      SU_CHANGE.NEQ
     );
   } else if (inputArgs[0] === "r" && inputArgs.length === 3) {
     await processReadValue(r2, inputArgs[1], inputArgs[2] as NUMBER_TYPES);

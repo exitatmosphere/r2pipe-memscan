@@ -31,9 +31,10 @@ export const SU_TEMP_FILE = `${LOCAL_FOLDER}/su-temp.txt`;
 export const MAX_LINES_BEFORE_WRITE = 1000;
 
 export enum SU_CHANGE {
-  UP = ">",
-  DOWN = "<",
-  SAME = "==",
+  GT = ">",
+  LS = "<",
+  EQ = "==",
+  NEQ = "!=",
 }
 
 const rl = readline.createInterface({

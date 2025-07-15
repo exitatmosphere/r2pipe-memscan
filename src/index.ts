@@ -253,8 +253,15 @@ async function processWriteValue(
   if (valueToWrite === null) {
     console.log("Incorrect number to write");
   } else {
+    // Cant pass floats to r2frida
+    const valueToWriteHex = hexStrFromNumber(valueToWrite, numberType);
+    const valueToWriteUint = numberFromHexStr(
+      valueToWriteHex!,
+      NUMBER_TYPES.UINT
+    );
+
     await r2.cmd(
-      `wv${NUMBER_PROPS[numberType].bytes} ${valueToWrite} @ ${addr}`
+      `wv${NUMBER_PROPS[numberType].bytes} ${valueToWriteUint} @ ${addr}`
     );
     console.log(`Wrote value ${valueToWrite} to address ${addr}`);
   }

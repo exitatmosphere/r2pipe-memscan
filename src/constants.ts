@@ -7,6 +7,7 @@ export const SIGTERM = 15;
 export enum NUMBER_TYPES {
   UINT = "uint",
   INT = "int",
+  FLOAT = "float",
 }
 
 export const NUMBER_PROPS = {
@@ -17,6 +18,10 @@ export const NUMBER_PROPS = {
   [NUMBER_TYPES.INT]: {
     bytes: 4,
     limits: [-2147483648, 2147483647],
+  },
+  [NUMBER_TYPES.FLOAT]: {
+    bytes: 4,
+    limits: null,
   },
 };
 

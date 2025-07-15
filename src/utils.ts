@@ -19,6 +19,10 @@ export function changeEndianness(hexNum: string) {
 export function validateNumber(numberAsStr: string, numberType: NUMBER_TYPES) {
   const number = Number(numberAsStr);
 
+  if (NUMBER_PROPS[numberType].limits === null) {
+    return number;
+  }
+
   if (
     number < NUMBER_PROPS[numberType].limits[0] ||
     number > NUMBER_PROPS[numberType].limits[1]
@@ -45,8 +49,11 @@ export function numberFromHexStr(hexStr: string, numberType: NUMBER_TYPES) {
     case NUMBER_TYPES.UINT: {
       return numberUint;
     }
-    default: {
+    case NUMBER_TYPES.INT: {
       return dv.getInt32(0);
+    }
+    default: {
+      return dv.getFloat32(0);
     }
   }
 }
@@ -70,8 +77,12 @@ export function hexStrFromNumber(number: number, numberType: NUMBER_TYPES) {
       dv.setUint32(0, number);
       break;
     }
-    default: {
+    case NUMBER_TYPES.INT: {
       dv.setInt32(0, number);
+      break;
+    }
+    default: {
+      dv.setFloat32(0, number);
     }
   }
 

@@ -192,8 +192,8 @@ async function processSearchForUnknownValue(
         const currentLineAsArray = currentLine.split(" ", 2);
 
         if (currentLineAsArray[0] === prevLineAsArray[0]) {
-          const prevValue = BigInt(prevLineAsArray[1]);
-          const currentValue = BigInt(currentLineAsArray[1]);
+          const prevValue = Number(prevLineAsArray[1]);
+          const currentValue = Number(currentLineAsArray[1]);
 
           if (
             (changeFromPrev === SU_CHANGE.GT && currentValue > prevValue) ||

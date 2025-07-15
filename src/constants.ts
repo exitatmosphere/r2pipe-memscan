@@ -12,11 +12,11 @@ export enum NUMBER_TYPES {
 export const NUMBER_PROPS = {
   [NUMBER_TYPES.UINT]: {
     bytes: 4,
-    limits: [0n, 4294967295n],
+    limits: [0, 4294967295],
   },
   [NUMBER_TYPES.INT]: {
     bytes: 4,
-    limits: [-2147483648n, 2147483647n],
+    limits: [-2147483648, 2147483647],
   },
 };
 
